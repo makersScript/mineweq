@@ -23,8 +23,8 @@ from firebase_admin import credentials, db as firebase_db
 BOT_TOKEN        = os.environ["BOT_TOKEN"]
 ADMIN_IDS        = list(map(int, os.environ.get("ADMIN_IDS", "0").split(",")))
 CRYPTO_BOT_TOKEN = os.environ.get("CRYPTO_BOT_TOKEN", "")
-FIREBASE_KEY     = os.environ["FIREBASE_KEY"]         
-FIREBASE_URL     = os.environ["FIREBASE_URL"]          
+FIREBASE_KEY     = os.environ["FIREBASE_KEY"]          # JSON-строка из env
+FIREBASE_URL     = os.environ["FIREBASE_URL"]          # https://mcpackcraft-3337f-default-rtdb.europe-west1.firebasedatabase.app
 
 WEEK_STARS       = 50
 FOREVER_STARS    = 150
@@ -694,6 +694,7 @@ def skip_icon_kb():
     ])
 
 
+def admin_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📊 Статистика",      callback_data="admin_stats")],
         [InlineKeyboardButton(text="🎁 Выдать подписку", callback_data="admin_give_sub")],
