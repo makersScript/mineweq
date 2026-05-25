@@ -643,9 +643,10 @@ def buy_sub_kb():
 
 def pack_type_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🖼 Текстуры", callback_data="ptype_texture")],
-        [InlineKeyboardButton(text="🔊 Звуки",    callback_data="ptype_sound")],
-        [InlineKeyboardButton(text="⬅️ Назад",   callback_data="main_menu")],
+        [InlineKeyboardButton(text="🖼 Добавить текстуру", callback_data="add_texture")],
+        [InlineKeyboardButton(text="🔊 Добавить звук",     callback_data="add_sound")],
+        [InlineKeyboardButton(text="📦 Скачать пак",       callback_data="finish_pack")],
+        [InlineKeyboardButton(text="⬅️ Назад",             callback_data="main_menu")],
     ])
 
 def version_kb():
@@ -678,13 +679,15 @@ def items_kb(items: list):
 
 def add_more_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Добавить ещё текстуру", callback_data="add_more_yes")],
-        [InlineKeyboardButton(text="📦 Скачать пак",           callback_data="finish_pack")],
+        [InlineKeyboardButton(text="🖼 Добавить текстуру", callback_data="add_texture")],
+        [InlineKeyboardButton(text="🔊 Добавить звук",     callback_data="add_sound")],
+        [InlineKeyboardButton(text="📦 Скачать пак",       callback_data="finish_pack")],
     ])
 
 def add_more_sound_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Добавить ещё звук", callback_data="add_more_yes")],
+        [InlineKeyboardButton(text="🖼 Добавить текстуру", callback_data="add_texture")],
+        [InlineKeyboardButton(text="🔊 Добавить ещё звук", callback_data="add_sound")],
         [InlineKeyboardButton(text="📦 Скачать пак",       callback_data="finish_pack")],
     ])
 
@@ -1002,22 +1005,30 @@ async def cb_create_pack(cq: CallbackQuery, state: FSMContext):
             parse_mode="HTML"
         )
         return
-    await state.set_state(PackStates.choose_type)
     await state.update_data(texture_files={}, sound_files={})
-    await cq.message.edit_text(
-        "🎨 <b>Что хочешь заменить?</b>\n\n"
-        "Можно добавить и текстуры, и звуки — они всё войдут в один пак.",
-        reply_markup=pack_type_kb(), parse_mode="HTML"
-    )
-
-@dp.callback_query(PackStates.choose_type, F.data.startswith("ptype_"))
-async def cb_pack_type(cq: CallbackQuery, state: FSMContext):
-    ptype = cq.data.split("_")[1]
-    await state.update_data(pack_type=ptype)
     await state.set_state(PackStates.choose_version)
     await cq.message.edit_text(
         "🌍 <b>Выбери версию Minecraft:</b>",
         reply_markup=version_kb(), parse_mode="HTML"
+    )
+
+@dp.callback_query(F.data == "add_texture")
+async def cb_add_texture(cq: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    await state.update_data(pack_type="texture")
+    await state.set_state(PackStates.choose_category)
+    await cq.message.edit_text(
+        "📂 <b>Выбери категорию текстуры:</b>",
+        reply_markup=category_kb("texture"), parse_mode="HTML"
+    )
+
+@dp.callback_query(F.data == "add_sound")
+async def cb_add_sound(cq: CallbackQuery, state: FSMContext):
+    await state.update_data(pack_type="sound")
+    await state.set_state(PackStates.choose_category)
+    await cq.message.edit_text(
+        "🔊 <b>Выбери звук:</b>",
+        reply_markup=sound_category_kb(), parse_mode="HTML"
     )
 
 @dp.callback_query(PackStates.choose_version, F.data.startswith("ver_"))
