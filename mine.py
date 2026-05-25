@@ -396,28 +396,28 @@ BEDROCK_PATHS = {
 }
 
 # ─── SOUND MAPPINGS ────────────────────────────────────────────────────────────
-# Внутреннее имя → (java_path, bedrock_path, sounds.json event)
+# Внутреннее имя → (java_path, bedrock_path, java_event, bedrock_event)
 SOUNDS = {
-    "hurt":        ("assets/minecraft/sounds/damage/hit1.ogg",          "sounds/damage/hit1.ogg",         "entity.player.hurt"),
-    "death":       ("assets/minecraft/sounds/damage/hit3.ogg",          "sounds/damage/hit3.ogg",         "entity.player.death"),
-    "explosion":   ("assets/minecraft/sounds/random/explode1.ogg",      "sounds/random/explode1.ogg",     "entity.generic.explode"),
-    "eat":         ("assets/minecraft/sounds/random/eat1.ogg",          "sounds/random/eat1.ogg",         "entity.player.burp"),
-    "levelup":     ("assets/minecraft/sounds/random/levelup.ogg",       "sounds/random/levelup.ogg",      "entity.player.levelup"),
-    "click":       ("assets/minecraft/sounds/random/click.ogg",         "sounds/random/click.ogg",        "ui.button.click"),
-    "swim":        ("assets/minecraft/sounds/liquid/swim1.ogg",         "sounds/liquid/swim1.ogg",        "entity.player.swim"),
-    "anvil":       ("assets/minecraft/sounds/random/anvil_use.ogg",     "sounds/random/anvil_use.ogg",    "block.anvil.use"),
-    "chest_open":  ("assets/minecraft/sounds/random/chestopen.ogg",     "sounds/random/chestopen.ogg",    "block.chest.open"),
-    "chest_close": ("assets/minecraft/sounds/random/chestclosed.ogg",   "sounds/random/chestclosed.ogg",  "block.chest.close"),
-    "bow_shoot":   ("assets/minecraft/sounds/random/bow.ogg",           "sounds/random/bow.ogg",          "entity.arrow.shoot"),
-    "sword_hit":   ("assets/minecraft/sounds/random/classic_hurt.ogg",  "sounds/random/classic_hurt.ogg", "entity.player.attack.strong"),
-    "portal":      ("assets/minecraft/sounds/portal/portal.ogg",        "sounds/portal/portal.ogg",       "block.portal.ambient"),
-    "enderman_scream": ("assets/minecraft/sounds/mob/endermen/scream1.ogg", "sounds/mob/endermen/scream1.ogg", "entity.enderman.scream"),
-    "creeper_hiss":    ("assets/minecraft/sounds/mob/creeper/say1.ogg", "sounds/mob/creeper/say1.ogg",    "entity.creeper.primed"),
-    "villager":        ("assets/minecraft/sounds/mob/villager/idle1.ogg","sounds/mob/villager/idle1.ogg",  "entity.villager.ambient"),
-    "thunder":         ("assets/minecraft/sounds/ambient/weather/thunder1.ogg","sounds/ambient/weather/thunder1.ogg","entity.lightning_bolt.thunder"),
-    "rain":            ("assets/minecraft/sounds/ambient/weather/rain.ogg","sounds/ambient/weather/rain.ogg","weather.rain"),
-    "fire":            ("assets/minecraft/sounds/fire/fire.ogg",        "sounds/fire/fire.ogg",           "block.fire.ambient"),
-    "splash":          ("assets/minecraft/sounds/liquid/splash.ogg",    "sounds/liquid/splash.ogg",       "entity.splash_potion.throw"),
+    "hurt":            ("assets/minecraft/sounds/damage/hit1.ogg",              "sounds/damage/hit1.ogg",              "entity.player.hurt",             "mob.player.hurt"),
+    "death":           ("assets/minecraft/sounds/damage/hit3.ogg",              "sounds/damage/hit3.ogg",              "entity.player.death",            "mob.player.death"),
+    "explosion":       ("assets/minecraft/sounds/random/explode1.ogg",          "sounds/random/explode1.ogg",          "entity.generic.explode",         "random.explode"),
+    "eat":             ("assets/minecraft/sounds/random/eat1.ogg",              "sounds/random/eat1.ogg",              "entity.player.burp",             "mob.player.burp"),
+    "levelup":         ("assets/minecraft/sounds/random/levelup.ogg",           "sounds/random/levelup.ogg",           "entity.player.levelup",          "random.levelup"),
+    "click":           ("assets/minecraft/sounds/random/click.ogg",             "sounds/random/click.ogg",             "ui.button.click",                "random.click"),
+    "swim":            ("assets/minecraft/sounds/liquid/swim1.ogg",             "sounds/liquid/swim1.ogg",             "entity.player.swim",             "mob.player.swim"),
+    "anvil":           ("assets/minecraft/sounds/random/anvil_use.ogg",         "sounds/random/anvil_use.ogg",         "block.anvil.use",                "random.anvil_use"),
+    "chest_open":      ("assets/minecraft/sounds/random/chestopen.ogg",         "sounds/random/chestopen.ogg",         "block.chest.open",               "random.chestopen"),
+    "chest_close":     ("assets/minecraft/sounds/random/chestclosed.ogg",       "sounds/random/chestclosed.ogg",       "block.chest.close",              "random.chestclosed"),
+    "bow_shoot":       ("assets/minecraft/sounds/random/bow.ogg",               "sounds/random/bow.ogg",               "entity.arrow.shoot",             "random.bow"),
+    "sword_hit":       ("assets/minecraft/sounds/random/classic_hurt.ogg",      "sounds/random/classic_hurt.ogg",      "entity.player.attack.strong",    "mob.player.attack.strong"),
+    "portal":          ("assets/minecraft/sounds/portal/portal.ogg",            "sounds/portal/portal.ogg",            "block.portal.ambient",           "portal.portal"),
+    "enderman_scream": ("assets/minecraft/sounds/mob/endermen/scream1.ogg",     "sounds/mob/endermen/scream1.ogg",     "entity.enderman.scream",         "mob.endermen.scream"),
+    "creeper_hiss":    ("assets/minecraft/sounds/mob/creeper/say1.ogg",         "sounds/mob/creeper/say1.ogg",         "entity.creeper.primed",          "mob.creeper.say"),
+    "villager":        ("assets/minecraft/sounds/mob/villager/idle1.ogg",       "sounds/mob/villager/idle1.ogg",       "entity.villager.ambient",        "mob.villager.idle"),
+    "thunder":         ("assets/minecraft/sounds/ambient/weather/thunder1.ogg", "sounds/ambient/weather/thunder1.ogg", "entity.lightning_bolt.thunder",  "ambient.weather.thunder"),
+    "rain":            ("assets/minecraft/sounds/ambient/weather/rain.ogg",     "sounds/ambient/weather/rain.ogg",     "weather.rain",                   "ambient.weather.rain"),
+    "fire":            ("assets/minecraft/sounds/fire/fire.ogg",                "sounds/fire/fire.ogg",                "block.fire.ambient",             "fire.fire"),
+    "splash":          ("assets/minecraft/sounds/liquid/splash.ogg",            "sounds/liquid/splash.ogg",            "entity.splash_potion.throw",     "random.splash"),
 }
 
 ITEM_LABELS = {
@@ -641,7 +641,8 @@ def buy_sub_kb():
         [InlineKeyboardButton(text="⬅️ Назад",                    callback_data="main_menu")],
     ])
 
-def pack_type_kb():
+def pack_content_kb():
+    """Что добавить в пак — можно всё вместе."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🖼 Добавить текстуру", callback_data="add_texture")],
         [InlineKeyboardButton(text="🔊 Добавить звук",     callback_data="add_sound")],
@@ -679,16 +680,16 @@ def items_kb(items: list):
 
 def add_more_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🖼 Добавить текстуру", callback_data="add_texture")],
-        [InlineKeyboardButton(text="🔊 Добавить звук",     callback_data="add_sound")],
-        [InlineKeyboardButton(text="📦 Скачать пак",       callback_data="finish_pack")],
+        [InlineKeyboardButton(text="🖼 Ещё текстуру",  callback_data="add_texture"),
+         InlineKeyboardButton(text="🔊 Ещё звук",      callback_data="add_sound")],
+        [InlineKeyboardButton(text="📦 Скачать пак",   callback_data="finish_pack")],
     ])
 
 def add_more_sound_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🖼 Добавить текстуру", callback_data="add_texture")],
-        [InlineKeyboardButton(text="🔊 Добавить ещё звук", callback_data="add_sound")],
-        [InlineKeyboardButton(text="📦 Скачать пак",       callback_data="finish_pack")],
+        [InlineKeyboardButton(text="🖼 Ещё текстуру",  callback_data="add_texture"),
+         InlineKeyboardButton(text="🔊 Ещё звук",      callback_data="add_sound")],
+        [InlineKeyboardButton(text="📦 Скачать пак",   callback_data="finish_pack")],
     ])
 
 def skip_icon_kb():
@@ -709,7 +710,7 @@ def _make_sounds_json(sound_keys: list) -> str:
     """Генерирует sounds.json для Java Edition."""
     result = {}
     for key in sound_keys:
-        event = SOUNDS[key][2]
+        event     = SOUNDS[key][2]   # Java event
         java_path = SOUNDS[key][0]
         # убираем префикс assets/minecraft/sounds/ и .ogg
         rel = java_path.replace("assets/minecraft/sounds/", "").replace(".ogg", "")
@@ -723,7 +724,7 @@ def _make_sound_definitions_json(sound_keys: list) -> str:
     """Генерирует sound_definitions.json для Bedrock Edition."""
     result = {"format_version": "1.14.0", "sound_definitions": {}}
     for key in sound_keys:
-        event = SOUNDS[key][2]
+        event    = SOUNDS[key][3]   # Bedrock event (исправлено!)
         bed_path = SOUNDS[key][1].replace(".ogg", "")
         result["sound_definitions"][event] = {
             "category": "neutral",
@@ -1008,27 +1009,9 @@ async def cb_create_pack(cq: CallbackQuery, state: FSMContext):
     await state.update_data(texture_files={}, sound_files={})
     await state.set_state(PackStates.choose_version)
     await cq.message.edit_text(
-        "🌍 <b>Выбери версию Minecraft:</b>",
+        "🌍 <b>Выбери версию Minecraft:</b>\n\n"
+        "В один пак войдут и текстуры, и звуки — всё вместе!",
         reply_markup=version_kb(), parse_mode="HTML"
-    )
-
-@dp.callback_query(F.data == "add_texture")
-async def cb_add_texture(cq: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    await state.update_data(pack_type="texture")
-    await state.set_state(PackStates.choose_category)
-    await cq.message.edit_text(
-        "📂 <b>Выбери категорию текстуры:</b>",
-        reply_markup=category_kb("texture"), parse_mode="HTML"
-    )
-
-@dp.callback_query(F.data == "add_sound")
-async def cb_add_sound(cq: CallbackQuery, state: FSMContext):
-    await state.update_data(pack_type="sound")
-    await state.set_state(PackStates.choose_category)
-    await cq.message.edit_text(
-        "🔊 <b>Выбери звук:</b>",
-        reply_markup=sound_category_kb(), parse_mode="HTML"
     )
 
 @dp.callback_query(PackStates.choose_version, F.data.startswith("ver_"))
@@ -1087,28 +1070,27 @@ async def upload_icon(message: Message, state: FSMContext):
     buf = io.BytesIO()
     await bot.download_file(file.file_path, buf)
     await state.update_data(pack_icon=buf.getvalue())
-    await _proceed_to_category(message, state)
+    await _proceed_to_content_menu(message, state)
 
 @dp.callback_query(PackStates.upload_icon, F.data == "skip_icon")
 async def cb_skip_icon(cq: CallbackQuery, state: FSMContext):
     await state.update_data(pack_icon=None)
-    await _proceed_to_category(cq.message, state, edit=True)
+    await _proceed_to_content_menu(cq.message, state, edit=True)
 
-async def _proceed_to_category(msg, state: FSMContext, edit: bool = False):
+async def _proceed_to_content_menu(msg, state: FSMContext, edit: bool = False):
+    """Показывает единое меню: добавить текстуру / добавить звук / скачать."""
     data = await state.get_data()
-    await state.set_state(PackStates.choose_category)
-    text_sound = "🔊 <b>Выбери звук для замены:</b>"
-    text_tex   = "📂 <b>Выбери категорию:</b>"
-    if data["pack_type"] == "sound":
-        if edit:
-            await msg.edit_text(text_sound, reply_markup=sound_category_kb(), parse_mode="HTML")
-        else:
-            await msg.answer(text_sound, reply_markup=sound_category_kb(), parse_mode="HTML")
+    tex_count = len(data.get("texture_files", {}))
+    snd_count = len(data.get("sound_files", {}))
+    summary = ""
+    if tex_count or snd_count:
+        summary = f"\n\n📊 В паке уже: 🖼 {tex_count} текстур, 🔊 {snd_count} звуков"
+    await state.set_state(PackStates.add_more)
+    text = f"🎨 <b>Что добавить в пак?</b>{summary}\n\nДобавляй текстуры и звуки — всё войдёт в один файл."
+    if edit:
+        await msg.edit_text(text, reply_markup=pack_content_kb(), parse_mode="HTML")
     else:
-        if edit:
-            await msg.edit_text(text_tex, reply_markup=category_kb(data["pack_type"]), parse_mode="HTML")
-        else:
-            await msg.answer(text_tex, reply_markup=category_kb(data["pack_type"]), parse_mode="HTML")
+        await msg.answer(text, reply_markup=pack_content_kb(), parse_mode="HTML")
 
 @dp.callback_query(PackStates.choose_category, F.data.startswith("cat_"))
 async def cb_category(cq: CallbackQuery, state: FSMContext):
@@ -1147,20 +1129,23 @@ async def cb_item(cq: CallbackQuery, state: FSMContext):
 
 @dp.message(PackStates.upload_file, F.photo | F.document)
 async def upload_file(message: Message, state: FSMContext):
-    data       = await state.get_data()
-    pack_type  = data.get("pack_type", "texture")
-    item_key   = data.get("current_item")
-    tex_files  = data.get("texture_files", {})
-    snd_files  = data.get("sound_files", {})
+    data        = await state.get_data()
+    current_mode = data.get("current_mode", "texture")
+    item_key    = data.get("current_item")
+    tex_files   = data.get("texture_files", {})
+    snd_files   = data.get("sound_files", {})
 
-    if pack_type == "sound":
+    if current_mode == "sound":
         if not message.document:
-            await message.answer("❌ Отправь файл .ogg (не фото)")
+            await message.answer("❌ Отправь файл .ogg как документ (не фото)")
             return
         doc = message.document
         if not doc.file_name.lower().endswith(".ogg"):
-            await message.answer("❌ Нужен файл в формате .ogg\n\n"
-                                  "Конвертировать можно на audio.online-convert.com")
+            await message.answer(
+                "❌ Нужен файл в формате <b>.ogg</b>\n\n"
+                "💡 Конвертировать можно бесплатно на audio.online-convert.com",
+                parse_mode="HTML"
+            )
             return
         file = await bot.get_file(doc.file_id)
         buf  = io.BytesIO()
@@ -1169,7 +1154,7 @@ async def upload_file(message: Message, state: FSMContext):
         await state.update_data(sound_files=snd_files)
         label = SOUND_LABELS.get(item_key, item_key)
         await message.answer(
-            f"✅ <b>{label}</b> добавлен!\n\nЧто дальше?",
+            f"✅ <b>{label}</b> добавлен!\n\nЧто добавим дальше?",
             reply_markup=add_more_sound_kb(), parse_mode="HTML"
         )
     else:
@@ -1187,34 +1172,32 @@ async def upload_file(message: Message, state: FSMContext):
         await state.update_data(texture_files=tex_files)
         label = ITEM_LABELS.get(item_key, item_key)
         await message.answer(
-            f"✅ <b>{label}</b> добавлена!\n\nЧто дальше?",
+            f"✅ <b>{label}</b> добавлена!\n\nЧто добавим дальше?",
             reply_markup=add_more_kb(), parse_mode="HTML"
         )
     await state.set_state(PackStates.add_more)
 
-@dp.callback_query(PackStates.add_more, F.data == "add_more_yes")
-async def cb_add_more(cq: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
+@dp.callback_query(F.data == "add_texture")
+async def cb_add_texture(cq: CallbackQuery, state: FSMContext):
+    await state.update_data(current_mode="texture")
     await state.set_state(PackStates.choose_category)
-    if data.get("pack_type") == "sound":
-        await cq.message.edit_text(
-            "🔊 <b>Выбери следующий звук:</b>",
-            reply_markup=sound_category_kb(), parse_mode="HTML"
-        )
-    else:
-        await cq.message.edit_text(
-            "📂 <b>Выбери категорию:</b>",
-            reply_markup=category_kb(data.get("pack_type")), parse_mode="HTML"
-        )
+    await cq.message.edit_text(
+        "📂 <b>Выбери категорию текстуры:</b>",
+        reply_markup=category_kb("texture"), parse_mode="HTML"
+    )
+
+@dp.callback_query(F.data == "add_sound")
+async def cb_add_sound(cq: CallbackQuery, state: FSMContext):
+    await state.update_data(current_mode="sound")
+    await state.set_state(PackStates.choose_category)
+    await cq.message.edit_text(
+        "🔊 <b>Выбери звук для замены:</b>",
+        reply_markup=sound_category_kb(), parse_mode="HTML"
+    )
 
 @dp.callback_query(F.data == "choose_cat")
 async def cb_choose_cat(cq: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    await state.set_state(PackStates.choose_category)
-    await cq.message.edit_text(
-        "📂 <b>Выбери категорию:</b>",
-        reply_markup=category_kb(data.get("pack_type")), parse_mode="HTML"
-    )
+    await cb_add_texture(cq, state)
 
 @dp.callback_query(F.data == "finish_pack")
 async def cb_finish_pack(cq: CallbackQuery, state: FSMContext):
