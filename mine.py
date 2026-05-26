@@ -604,7 +604,6 @@ CATEGORIES = {
 
 # ─── FSM STATES ────────────────────────────────────────────────────────────────
 class PackStates(StatesGroup):
-    choose_type     = State()
     choose_version  = State()
     enter_name      = State()
     enter_desc      = State()
@@ -827,15 +826,38 @@ dp  = Dispatcher(storage=MemoryStorage())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     upsert_user(message.from_user.id, message.from_user.username)
+    name = message.from_user.first_name or "игрок"
     await message.answer(
-        "🎮 <b>Добро пожаловать в PackCraftBot!</b>\n\n"
+        f"🎮 <b>Привет, {name}! Добро пожаловать в PackCraftBot!</b>\n\n"
         "Создай кастомный ресурс-пак для Minecraft прямо здесь:\n"
-        "• 🖼 Текстуры — блоки, мобы, броня, инструменты, GUI\n"
-        "• 🔊 Звуки — замени любой звук игры\n"
-        "• ☕ Java Edition и 📱 Bedrock Edition\n\n"
+        "• 🖼 <b>Текстуры</b> — блоки, мобы, броня, инструменты, GUI\n"
+        "• 🔊 <b>Звуки</b> — замени любой звук игры\n"
+        "• ☕ Java Edition и 📱 Bedrock Edition\n"
+        "• 📦 Текстуры и звуки в <b>одном паке</b>!\n\n"
         "🆓 <b>Бесплатно:</b> 1 пак\n"
         "💎 <b>Подписка:</b> безлимитные паки!\n\n"
         "Выбери действие:",
+        reply_markup=main_menu_kb(), parse_mode="HTML"
+    )
+
+@dp.message(Command("help"))
+async def cmd_help(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "📖 <b>Как пользоваться PackCraftBot?</b>\n\n"
+        "<b>1.</b> Нажми «🎨 Создать ресурс-пак»\n"
+        "<b>2.</b> Выбери версию: ☕ Java или 📱 Bedrock\n"
+        "<b>3.</b> Введи название и описание пака\n"
+        "<b>4.</b> При желании загрузи иконку пака\n"
+        "<b>5.</b> Добавляй текстуры (PNG) и звуки (OGG) — сколько угодно\n"
+        "<b>6.</b> Нажми «📦 Скачать пак» — получишь готовый файл!\n\n"
+        "📌 <b>Форматы файлов:</b>\n"
+        "• Текстуры: <code>.png</code> (16×16 до 128×128)\n"
+        "• Звуки: <code>.ogg</code> (конвертировать: audio.online-convert.com)\n\n"
+        "📌 <b>Установка:</b>\n"
+        "• <b>Java:</b> скопируй .zip в папку <code>resourcepacks</code>\n"
+        "• <b>Bedrock:</b> переименуй в .mcpack и открой\n\n"
+        "❓ Вопросы? Пиши @PackCraftBot",
         reply_markup=main_menu_kb(), parse_mode="HTML"
     )
 
@@ -1106,7 +1128,7 @@ async def cb_category(cq: CallbackQuery, state: FSMContext):
 @dp.callback_query(PackStates.choose_category, F.data.startswith("snd_"))
 async def cb_sound_item(cq: CallbackQuery, state: FSMContext):
     snd_key = cq.data[4:]
-    await state.update_data(current_item=snd_key, pack_type="sound")
+    await state.update_data(current_item=snd_key, current_mode="sound")
     await state.set_state(PackStates.upload_file)
     label = SOUND_LABELS.get(snd_key, snd_key)
     await cq.message.edit_text(
@@ -1118,7 +1140,7 @@ async def cb_sound_item(cq: CallbackQuery, state: FSMContext):
 @dp.callback_query(PackStates.choose_item, F.data.startswith("item_"))
 async def cb_item(cq: CallbackQuery, state: FSMContext):
     item_key = cq.data[5:]
-    await state.update_data(current_item=item_key)
+    await state.update_data(current_item=item_key, current_mode="texture")
     await state.set_state(PackStates.upload_file)
     label = ITEM_LABELS.get(item_key, item_key)
     await cq.message.edit_text(
@@ -1211,30 +1233,41 @@ async def cb_finish_pack(cq: CallbackQuery, state: FSMContext):
     uid       = cq.from_user.id
 
     if not tex_files and not snd_files:
-        await cq.answer("Добавь хотя бы один файл!", show_alert=True)
+        await cq.answer("⚠️ Добавь хотя бы одну текстуру или звук!", show_alert=True)
         return
 
-    await cq.message.edit_text("⏳ Собираю ресурс-пак...")
+    await cq.message.edit_text("⏳ <b>Собираю ресурс-пак...</b> Подожди секунду!", parse_mode="HTML")
 
-    if version == "java":
-        pack_bytes = build_java_pack(tex_files, snd_files, pack_name, pack_desc, pack_icon)
-        filename   = f"{pack_name}_Java.zip"
-    else:
-        pack_bytes = build_bedrock_pack(tex_files, snd_files, pack_name, pack_desc, pack_icon)
-        filename   = f"{pack_name}_Bedrock.mcpack"
+    try:
+        if version == "java":
+            pack_bytes = build_java_pack(tex_files, snd_files, pack_name, pack_desc, pack_icon)
+            filename   = f"{pack_name}_Java.zip"
+        else:
+            pack_bytes = build_bedrock_pack(tex_files, snd_files, pack_name, pack_desc, pack_icon)
+            filename   = f"{pack_name}_Bedrock.mcpack"
+    except Exception as e:
+        await cq.message.edit_text(
+            f"❌ <b>Ошибка сборки пака:</b> <code>{e}</code>\n\nПопробуй ещё раз.",
+            reply_markup=main_menu_kb(), parse_mode="HTML"
+        )
+        return
 
     increment_packs(uid)
     await state.clear()
 
     total = len(tex_files) + len(snd_files)
-    install_text = (
-        "• Помести .zip в папку resourcepacks\n"
-        "• Зайди в игру → Настройки → Пакеты ресурсов"
-        if version == "java" else
-        "• Переименуй файл в .mcpack и открой\n"
-        "• Bedrock установит автоматически"
-    )
-    icon_note = " 🖼 Аватарка включена" if pack_icon else ""
+    if version == "java":
+        install_text = (
+            "1. Помести <code>{}.zip</code> в папку <code>resourcepacks</code>\n"
+            "2. Зайди в игру → Настройки → Пакеты ресурсов → активируй пак"
+        ).format(pack_name)
+    else:
+        install_text = (
+            "1. Переименуй файл в <code>{}.mcpack</code>\n"
+            "2. Открой файл — Bedrock установит автоматически"
+        ).format(pack_name)
+
+    icon_note = " ✅" if pack_icon else " ➖"
     await bot.send_document(
         chat_id=uid,
         document=BufferedInputFile(pack_bytes, filename=filename),
@@ -1242,10 +1275,10 @@ async def cb_finish_pack(cq: CallbackQuery, state: FSMContext):
             f"✅ <b>Ресурс-пак готов!</b>\n\n"
             f"📛 Название: <b>{pack_name}</b>\n"
             f"📝 Описание: <i>{pack_desc}</i>\n"
-            f"📦 Версия: {'☕ Java' if version=='java' else '📱 Bedrock'}\n"
-            f"🖼 Текстур: {len(tex_files)}\n"
-            f"🔊 Звуков: {len(snd_files)}\n"
-            f"📁 Всего изменений: {total}{icon_note}\n\n"
+            f"📦 Версия: {'☕ Java Edition' if version=='java' else '📱 Bedrock Edition'}\n"
+            f"🖼 Текстур: <b>{len(tex_files)}</b>\n"
+            f"🔊 Звуков: <b>{len(snd_files)}</b>\n"
+            f"🖼 Иконка пака:{icon_note}\n\n"
             f"📥 <b>Как установить:</b>\n{install_text}"
         ),
         parse_mode="HTML",
@@ -1327,6 +1360,17 @@ async def admin_give_type(cq: CallbackQuery, state: FSMContext):
         )
     except Exception:
         pass
+
+# ─── FALLBACK ──────────────────────────────────────────────────────────────────
+@dp.message()
+async def fallback_message(message: Message, state: FSMContext):
+    """Обрабатывает любые неожиданные сообщения вне FSM-состояний."""
+    current_state = await state.get_state()
+    if current_state is None:
+        await message.answer(
+            "👋 Используй меню ниже или введи /start",
+            reply_markup=main_menu_kb()
+        )
 
 # ─── MAIN ──────────────────────────────────────────────────────────────────────
 async def main():
