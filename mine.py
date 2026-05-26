@@ -938,6 +938,11 @@ async def cb_pay_stars(cq: CallbackQuery):
 
 @dp.pre_checkout_query()
 async def pre_checkout(pcq: PreCheckoutQuery):
+    # Проверяем что payload корректный
+    valid_payloads = {"stars_week", "stars_forever"}
+    if pcq.invoice_payload not in valid_payloads:
+        await bot.answer_pre_checkout_query(pcq.id, ok=False, error_message="Неверный платёж. Попробуй снова.")
+        return
     await bot.answer_pre_checkout_query(pcq.id, ok=True)
 
 @dp.message(F.successful_payment)
@@ -947,6 +952,17 @@ async def payment_done(message: Message):
     amount  = message.successful_payment.total_amount
     log_payment(uid, "stars", amount, payload)
     sub_type = "forever" if "forever" in payload else "week"
+
+    # Не понижаем forever → week
+    u = get_user(uid)
+    if u and u.get("sub_type") == "forever":
+        await message.answer(
+            "ℹ️ У тебя уже есть подписка <b>навсегда</b> — она сильнее!\n"
+            "Обратись к администратору для возврата средств.",
+            parse_mode="HTML", reply_markup=main_menu_kb()
+        )
+        return
+
     give_sub(uid, sub_type)
     label = "навсегда ♾" if sub_type == "forever" else "на неделю 📅"
     await message.answer(
@@ -962,6 +978,7 @@ async def cb_pay_crypto(cq: CallbackQuery):
     import aiohttp
     plan   = "week" if "week" in cq.data else "forever"
     amount = WEEK_CRYPTO_USD if plan == "week" else FOREVER_CRYPTO_USD
+    uid    = cq.from_user.id
     async with aiohttp.ClientSession() as session:
         resp = await session.post(
             "https://pay.crypt.bot/api/createInvoice",
@@ -969,7 +986,8 @@ async def cb_pay_crypto(cq: CallbackQuery):
             json={
                 "asset": "USDT", "amount": str(amount),
                 "description": f"PackCraftBot — {'неделя' if plan=='week' else 'навсегда'}",
-                "payload": f"crypto_{plan}_{cq.from_user.id}",
+                # Прячем uid в payload чтобы потом проверить
+                "payload": f"crypto_{plan}_{uid}",
                 "paid_btn_name": "callback",
                 "paid_btn_url": f"https://t.me/{(await bot.get_me()).username}",
             }
@@ -980,7 +998,7 @@ async def cb_pay_crypto(cq: CallbackQuery):
         invoice_id = data["result"]["invoice_id"]
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💰 Оплатить", url=pay_url)],
-            [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_crypto_{invoice_id}_{plan}")],
+            [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_crypto_{invoice_id}_{plan}_{uid}")],
         ])
         await cq.message.edit_text(
             f"💰 <b>Оплата через CryptoBot</b>\n\nСумма: <b>${amount} USDT</b>\n\n"
@@ -992,9 +1010,20 @@ async def cb_pay_crypto(cq: CallbackQuery):
 
 @dp.callback_query(F.data.startswith("check_crypto_"))
 async def cb_check_crypto(cq: CallbackQuery):
-    parts      = cq.data.split("_")
-    invoice_id = parts[2]
-    plan       = parts[3]
+    parts = cq.data.split("_")
+    # Формат: check_crypto_{invoice_id}_{plan}_{uid}
+    if len(parts) < 5:
+        await cq.answer("Неверный запрос.", show_alert=True)
+        return
+    invoice_id   = parts[2]
+    plan         = parts[3]
+    owner_uid    = int(parts[4])
+
+    # Проверяем что кнопку нажал тот кто платил
+    if cq.from_user.id != owner_uid:
+        await cq.answer("❌ Это не твой счёт.", show_alert=True)
+        return
+
     import aiohttp
     async with aiohttp.ClientSession() as session:
         resp = await session.get(
@@ -1003,20 +1032,38 @@ async def cb_check_crypto(cq: CallbackQuery):
             params={"invoice_ids": invoice_id}
         )
         data = await resp.json()
-    if data.get("ok") and data["result"]["items"]:
-        inv = data["result"]["items"][0]
-        if inv["status"] == "paid":
-            uid = cq.from_user.id
-            log_payment(uid, "crypto", inv.get("amount"), f"crypto_{plan}")
-            give_sub(uid, plan)
+
+    if not data.get("ok") or not data["result"]["items"]:
+        await cq.answer("Ошибка проверки. Попробуй позже.", show_alert=True)
+        return
+
+    inv = data["result"]["items"][0]
+
+    # Дополнительно проверяем payload из самого invoice
+    expected_payload = f"crypto_{plan}_{owner_uid}"
+    if inv.get("payload") != expected_payload:
+        await cq.answer("❌ Счёт не совпадает. Попробуй снова.", show_alert=True)
+        return
+
+    if inv["status"] == "paid":
+        uid = cq.from_user.id
+        # Не понижаем forever → week
+        u = get_user(uid)
+        if u and u.get("sub_type") == "forever" and plan == "week":
             await cq.message.edit_text(
-                "✅ <b>Оплата получена! Подписка активирована.</b>",
+                "ℹ️ У тебя уже есть подписка <b>навсегда</b>!",
                 parse_mode="HTML", reply_markup=main_menu_kb()
             )
-        else:
-            await cq.answer("Оплата ещё не прошла. Подожди немного.", show_alert=True)
+            return
+        log_payment(uid, "crypto", inv.get("amount"), f"crypto_{plan}")
+        give_sub(uid, plan)
+        label = "навсегда ♾" if plan == "forever" else "на неделю 📅"
+        await cq.message.edit_text(
+            f"✅ <b>Оплата получена! Подписка {label} активирована.</b>",
+            parse_mode="HTML", reply_markup=main_menu_kb()
+        )
     else:
-        await cq.answer("Ошибка проверки. Попробуй позже.", show_alert=True)
+        await cq.answer("Оплата ещё не прошла. Подожди немного и попробуй снова.", show_alert=True)
 
 # ─── CREATE PACK ───────────────────────────────────────────────────────────────
 @dp.callback_query(F.data == "create_pack")
