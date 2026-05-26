@@ -677,6 +677,13 @@ def items_kb(items: list):
     rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="choose_cat")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+def items_kb_with_back(items: list):
+    rows = []
+    for key in items:
+        rows.append([InlineKeyboardButton(text=ITEM_LABELS.get(key, key), callback_data=f"item_{key}")])
+    rows.append([InlineKeyboardButton(text="⬅️ Назад к категориям", callback_data="back_to_categories")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
 def add_more_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🖼 Ещё текстуру",  callback_data="add_texture"),
@@ -856,8 +863,7 @@ async def cmd_help(message: Message, state: FSMContext):
         "• Звуки: <code>.ogg</code> (конвертировать: audio.online-convert.com)\n\n"
         "📌 <b>Установка:</b>\n"
         "• <b>Java:</b> скопируй .zip в папку <code>resourcepacks</code>\n"
-        "• <b>Bedrock:</b> переименуй в .mcpack и открой\n\n"
-        "❓ Вопросы? Пиши @PackCraftBot",
+        "• <b>Bedrock:</b> переименуй в .mcpack и открой",
         reply_markup=main_menu_kb(), parse_mode="HTML"
     )
 
@@ -905,8 +911,7 @@ async def cb_about(cq: CallbackQuery):
         "💎 <b>Тарифы:</b>\n"
         "• Бесплатно — 1 пак\n"
         "• Неделя — 50⭐ или $1\n"
-        "• Навсегда — 150⭐ или $3\n\n"
-        "📩 Поддержка: @PackCraftBot",
+        "• Навсегда — 150⭐ или $3",
         reply_markup=back_kb(), parse_mode="HTML"
     )
 
@@ -1122,7 +1127,7 @@ async def cb_category(cq: CallbackQuery, state: FSMContext):
     await state.set_state(PackStates.choose_item)
     await cq.message.edit_text(
         "🔍 <b>Выбери что заменить:</b>",
-        reply_markup=items_kb(items), parse_mode="HTML"
+        reply_markup=items_kb_with_back(items), parse_mode="HTML"
     )
 
 @dp.callback_query(PackStates.choose_category, F.data.startswith("snd_"))
@@ -1134,7 +1139,7 @@ async def cb_sound_item(cq: CallbackQuery, state: FSMContext):
     await cq.message.edit_text(
         f"🔊 <b>{label}</b>\n\nОтправь файл звука в формате <b>.ogg</b>\n\n"
         "💡 Конвертировать mp3→ogg можно на сайте <a href='https://audio.online-convert.com/ru/convert-to-ogg'>online-convert.com</a>",
-        reply_markup=back_kb("create_pack"), parse_mode="HTML", disable_web_page_preview=True
+        reply_markup=back_kb("back_to_sounds"), parse_mode="HTML", disable_web_page_preview=True
     )
 
 @dp.callback_query(PackStates.choose_item, F.data.startswith("item_"))
@@ -1143,33 +1148,80 @@ async def cb_item(cq: CallbackQuery, state: FSMContext):
     await state.update_data(current_item=item_key, current_mode="texture")
     await state.set_state(PackStates.upload_file)
     label = ITEM_LABELS.get(item_key, item_key)
+    # Назад → к списку предметов этой категории
+    data = await state.get_data()
+    cat_key = data.get("category", "weapons")
     await cq.message.edit_text(
         f"🖼 <b>{label}</b>\n\nОтправь текстуру в формате <b>PNG</b>\n"
         "Поддерживаемые размеры: 16×16, 32×32, 64×64, 128×128",
-        reply_markup=back_kb("create_pack"), parse_mode="HTML"
+        reply_markup=back_kb(f"back_to_items_{cat_key}"), parse_mode="HTML"
     )
 
-@dp.message(PackStates.upload_file, F.photo | F.document)
+# ─── УМНЫЕ КНОПКИ "НАЗАД" ──────────────────────────────────────────────────────
+@dp.callback_query(F.data == "back_to_sounds")
+async def cb_back_to_sounds(cq: CallbackQuery, state: FSMContext):
+    await state.set_state(PackStates.choose_category)
+    await cq.message.edit_text(
+        "🔊 <b>Выбери звук для замены:</b>",
+        reply_markup=sound_category_kb(), parse_mode="HTML"
+    )
+
+@dp.callback_query(F.data == "back_to_categories")
+async def cb_back_to_categories(cq: CallbackQuery, state: FSMContext):
+    await state.set_state(PackStates.choose_category)
+    await cq.message.edit_text(
+        "📂 <b>Выбери категорию текстуры:</b>",
+        reply_markup=category_kb("texture"), parse_mode="HTML"
+    )
+
+@dp.callback_query(F.data.startswith("back_to_items_"))
+async def cb_back_to_items(cq: CallbackQuery, state: FSMContext):
+    cat_key = cq.data.replace("back_to_items_", "")
+    if cat_key not in CATEGORIES:
+        await cb_back_to_categories(cq, state)
+        return
+    _, items = CATEGORIES[cat_key]
+    await state.set_state(PackStates.choose_item)
+    await cq.message.edit_text(
+        "🔍 <b>Выбери что заменить:</b>",
+        reply_markup=items_kb(items), parse_mode="HTML"
+    )
+
+@dp.message(PackStates.upload_file, F.photo | F.document | F.audio)
 async def upload_file(message: Message, state: FSMContext):
-    data        = await state.get_data()
+    data         = await state.get_data()
     current_mode = data.get("current_mode", "texture")
-    item_key    = data.get("current_item")
-    tex_files   = data.get("texture_files", {})
-    snd_files   = data.get("sound_files", {})
+    item_key     = data.get("current_item")
+    tex_files    = data.get("texture_files", {})
+    snd_files    = data.get("sound_files", {})
 
     if current_mode == "sound":
-        if not message.document:
-            await message.answer("❌ Отправь файл .ogg как документ (не фото)")
-            return
-        doc = message.document
-        if not doc.file_name.lower().endswith(".ogg"):
+        # Принимаем .ogg как документ ИЛИ как audio (пересланные файлы)
+        file_id   = None
+        file_name = ""
+        if message.document:
+            file_id   = message.document.file_id
+            file_name = message.document.file_name or ""
+        elif message.audio:
+            file_id   = message.audio.file_id
+            file_name = message.audio.file_name or message.audio.title or "sound.ogg"
+        else:
             await message.answer(
-                "❌ Нужен файл в формате <b>.ogg</b>\n\n"
-                "💡 Конвертировать можно бесплатно на audio.online-convert.com",
+                "❌ Отправь <b>.ogg файл</b> как документ (скрепка → файл)\n\n"
+                "💡 Конвертировать можно на audio.online-convert.com",
                 parse_mode="HTML"
             )
             return
-        file = await bot.get_file(doc.file_id)
+
+        if not file_name.lower().endswith(".ogg"):
+            await message.answer(
+                "❌ Нужен файл в формате <b>.ogg</b>\n\n"
+                "💡 Конвертировать mp3/wav → ogg можно бесплатно:\naudio.online-convert.com",
+                parse_mode="HTML"
+            )
+            return
+
+        file = await bot.get_file(file_id)
         buf  = io.BytesIO()
         await bot.download_file(file.file_path, buf)
         snd_files[item_key] = buf.getvalue()
