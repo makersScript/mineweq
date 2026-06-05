@@ -5,7 +5,7 @@ import io
 import json
 from datetime import datetime, timedelta
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, BaseMiddleware
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
     LabeledPrice, PreCheckoutQuery, BufferedInputFile
@@ -19,12 +19,12 @@ from PIL import Image
 import firebase_admin
 from firebase_admin import credentials, db as firebase_db
 
-# ─── CONFIG FROM ENV ───────────────────────────────────────────────────────────
+
 BOT_TOKEN        = os.environ["BOT_TOKEN"]
 ADMIN_IDS        = list(map(int, os.environ.get("ADMIN_IDS", "0").split(",")))
 CRYPTO_BOT_TOKEN = os.environ.get("CRYPTO_BOT_TOKEN", "")
-FIREBASE_KEY     = os.environ["FIREBASE_KEY"]          # JSON-строка из env
-FIREBASE_URL     = os.environ["FIREBASE_URL"]          # https://mcpackcraft-3337f-default-rtdb.europe-west1.firebasedatabase.app
+FIREBASE_KEY     = os.environ["FIREBASE_KEY"]
+FIREBASE_URL     = os.environ["FIREBASE_URL"]
 
 WEEK_STARS       = 50
 FOREVER_STARS    = 150
@@ -1726,13 +1726,92 @@ def resize_texture(img_bytes: bytes, size: int = 16) -> bytes:
 bot = Bot(token=BOT_TOKEN)
 dp  = Dispatcher(storage=MemoryStorage())
 
+REQUIRED_CHANNEL_ID   = -1003888755036
+REQUIRED_CHANNEL_LINK = "https://t.me/swiftyOffc"
+
+async def check_channel_subscription(user_id: int) -> bool:
+    try:
+        member = await bot.get_chat_member(chat_id=REQUIRED_CHANNEL_ID, user_id=user_id)
+        return member.status not in ("left", "kicked", "banned")
+    except Exception:
+        return False
+
+def not_subscribed_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📢 Подписаться на канал", url=REQUIRED_CHANNEL_LINK)],
+        [InlineKeyboardButton(text="✅ Я подписался", callback_data="check_subscription")],
+    ])
+
+
+
+class SubscriptionMiddleware(BaseMiddleware):
+    async def __call__(self, handler, event, data):
+        from aiogram.types import Message, CallbackQuery
+
+        if isinstance(event, Message):
+            user_id = event.from_user.id
+            is_start = bool(event.text and event.text.startswith("/start"))
+        elif isinstance(event, CallbackQuery):
+            user_id = event.from_user.id
+            is_start = False
+            if event.data == "check_subscription":
+                return await handler(event, data)
+        else:
+            return await handler(event, data)
+
+        if is_start:
+            return await handler(event, data)
+
+        if not await check_channel_subscription(user_id):
+            kb = not_subscribed_kb()
+            text = (
+                "📢 <b>Для использования бота необходимо подписаться на наш канал!</b>\n\n"
+                "Подпишись и нажми кнопку «✅ Я подписался»"
+            )
+            if isinstance(event, Message):
+                await event.answer(text, reply_markup=kb, parse_mode="HTML")
+            elif isinstance(event, CallbackQuery):
+                await event.answer()
+                await event.message.answer(text, reply_markup=kb, parse_mode="HTML")
+            return
+
+        return await handler(event, data)
+
 # ─── /start ────────────────────────────────────────────────────────────────────
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     upsert_user(message.from_user.id, message.from_user.username)
+    if not await check_channel_subscription(message.from_user.id):
+        await message.answer(
+            "📢 <b>Для использования бота необходимо подписаться на наш канал!</b>\n\n"
+            "Подпишись и нажми кнопку «✅ Я подписался»",
+            reply_markup=not_subscribed_kb(), parse_mode="HTML"
+        )
+        return
     name = message.from_user.first_name or "игрок"
     await message.answer(
+        f"🎮 <b>Привет, {name}! Добро пожаловать в PackCraftBot!</b>\n\n"
+        "Создай кастомный ресурс-пак для Minecraft прямо здесь:\n"
+        "• 🖼 <b>Текстуры</b> — блоки, мобы, броня, инструменты, GUI\n"
+        "• 🔊 <b>Звуки</b> — замени любой звук игры\n"
+        "• ☕ Java Edition и 📱 Bedrock Edition\n"
+        "• 📦 Текстуры и звуки в <b>одном паке</b>!\n\n"
+        "🆓 <b>Бесплатно:</b> 1 пак\n"
+        "💎 <b>Подписка:</b> безлимитные паки!\n\n"
+        "Выбери действие:",
+        reply_markup=main_menu_kb(), parse_mode="HTML"
+    )
+
+@dp.callback_query(F.data == "check_subscription")
+async def cb_check_subscription(cq: CallbackQuery, state: FSMContext):
+    if not await check_channel_subscription(cq.from_user.id):
+        await cq.answer("❌ Ты ещё не подписался на канал!", show_alert=True)
+        return
+    await cq.message.delete()
+    upsert_user(cq.from_user.id, cq.from_user.username)
+    name = cq.from_user.first_name or "игрок"
+    await cq.message.answer(
         f"🎮 <b>Привет, {name}! Добро пожаловать в PackCraftBot!</b>\n\n"
         "Создай кастомный ресурс-пак для Minecraft прямо здесь:\n"
         "• 🖼 <b>Текстуры</b> — блоки, мобы, броня, инструменты, GUI\n"
@@ -2785,6 +2864,8 @@ async def fallback_message(message: Message, state: FSMContext):
 # ─── MAIN ──────────────────────────────────────────────────────────────────────
 async def main():
     init_firebase()
+    dp.message.middleware(SubscriptionMiddleware())
+    dp.callback_query.middleware(SubscriptionMiddleware())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
