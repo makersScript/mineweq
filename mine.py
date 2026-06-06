@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, F, BaseMiddleware
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
-    LabeledPrice, PreCheckoutQuery, BufferedInputFile
+    LabeledPrice, PreCheckoutQuery, BufferedInputFile, FSInputFile
 )
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
@@ -1777,6 +1777,39 @@ class SubscriptionMiddleware(BaseMiddleware):
 
         return await handler(event, data)
 
+
+MAIN_PHOTO = "main.jpg"
+
+async def send_photo_msg(target, text: str, reply_markup=None, parse_mode="HTML"):
+    """Send message with main.jpg photo as caption. Falls back to plain text if photo missing."""
+    import os
+    kwargs = {"caption": text, "parse_mode": parse_mode}
+    if reply_markup:
+        kwargs["reply_markup"] = reply_markup
+    try:
+        if os.path.exists(MAIN_PHOTO):
+            photo = FSInputFile(MAIN_PHOTO)
+        else:
+            photo = MAIN_PHOTO
+        await target.answer_photo(photo, **kwargs)
+    except Exception:
+        await target.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
+
+async def send_photo_msg_from_cq(cq_message, text: str, reply_markup=None, parse_mode="HTML"):
+    """Same but for cq.message context."""
+    import os
+    kwargs = {"caption": text, "parse_mode": parse_mode}
+    if reply_markup:
+        kwargs["reply_markup"] = reply_markup
+    try:
+        if os.path.exists(MAIN_PHOTO):
+            photo = FSInputFile(MAIN_PHOTO)
+        else:
+            photo = MAIN_PHOTO
+        await cq_message.answer_photo(photo, **kwargs)
+    except Exception:
+        await cq_message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
+
 # ─── /start ────────────────────────────────────────────────────────────────────
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
@@ -1790,7 +1823,7 @@ async def cmd_start(message: Message, state: FSMContext):
         )
         return
     name = message.from_user.first_name or "игрок"
-    await message.answer(
+    await send_photo_msg(message,
         f"🎮 <b>Привет, {name}! Добро пожаловать в PackCraftBot!</b>\n\n"
         "Создай кастомный ресурс-пак для Minecraft прямо здесь:\n"
         "• 🖼 <b>Текстуры</b> — блоки, мобы, броня, инструменты, GUI\n"
@@ -1800,7 +1833,7 @@ async def cmd_start(message: Message, state: FSMContext):
         "🆓 <b>Бесплатно:</b> 1 пак\n"
         "💎 <b>Подписка:</b> безлимитные паки!\n\n"
         "Выбери действие:",
-        reply_markup=main_menu_kb(), parse_mode="HTML"
+        reply_markup=main_menu_kb()
     )
 
 @dp.callback_query(F.data == "check_subscription")
@@ -1811,7 +1844,7 @@ async def cb_check_subscription(cq: CallbackQuery, state: FSMContext):
     await cq.message.delete()
     upsert_user(cq.from_user.id, cq.from_user.username)
     name = cq.from_user.first_name or "игрок"
-    await cq.message.answer(
+    await send_photo_msg_from_cq(cq.message,
         f"🎮 <b>Привет, {name}! Добро пожаловать в PackCraftBot!</b>\n\n"
         "Создай кастомный ресурс-пак для Minecraft прямо здесь:\n"
         "• 🖼 <b>Текстуры</b> — блоки, мобы, броня, инструменты, GUI\n"
@@ -1821,7 +1854,7 @@ async def cb_check_subscription(cq: CallbackQuery, state: FSMContext):
         "🆓 <b>Бесплатно:</b> 1 пак\n"
         "💎 <b>Подписка:</b> безлимитные паки!\n\n"
         "Выбери действие:",
-        reply_markup=main_menu_kb(), parse_mode="HTML"
+        reply_markup=main_menu_kb()
     )
 
 @dp.message(Command("help"))
@@ -1941,18 +1974,18 @@ async def payment_done(message: Message):
     # Не понижаем forever → week
     u = get_user(uid)
     if u and u.get("sub_type") == "forever":
-        await message.answer(
+        await send_photo_msg(message,
             "ℹ️ У тебя уже есть подписка <b>навсегда</b> — она сильнее!\n"
             "Обратись к администратору для возврата средств.",
-            parse_mode="HTML", reply_markup=main_menu_kb()
+            reply_markup=main_menu_kb()
         )
         return
 
     give_sub(uid, sub_type)
     label = "навсегда ♾" if sub_type == "forever" else "на неделю 📅"
-    await message.answer(
+    await send_photo_msg(message,
         f"✅ <b>Подписка {label} активирована!</b>\n\nТеперь создавай неограниченно паков 🎉",
-        parse_mode="HTML", reply_markup=main_menu_kb()
+        reply_markup=main_menu_kb()
     )
 
 @dp.callback_query(F.data.in_({"pay_crypto_week", "pay_crypto_forever"}))
@@ -2856,7 +2889,7 @@ async def fallback_message(message: Message, state: FSMContext):
     """Обрабатывает любые неожиданные сообщения вне FSM-состояний."""
     current_state = await state.get_state()
     if current_state is None:
-        await message.answer(
+        await send_photo_msg(message,
             "👋 Используй меню ниже или введи /start",
             reply_markup=main_menu_kb()
         )
