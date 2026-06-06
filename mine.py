@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, F, BaseMiddleware
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
-    LabeledPrice, PreCheckoutQuery, BufferedInputFile, FSInputFile
+    LabeledPrice, PreCheckoutQuery, BufferedInputFile
 )
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
@@ -1777,19 +1777,6 @@ class SubscriptionMiddleware(BaseMiddleware):
 
         return await handler(event, data)
 
-MAIN_PHOTO = "main.jpg"
-
-async def send_photo_msg(target, text: str, reply_markup=None, parse_mode="HTML"):
-    import os
-    kwargs = {"caption": text, "parse_mode": parse_mode}
-    if reply_markup:
-        kwargs["reply_markup"] = reply_markup
-    try:
-        photo = FSInputFile(MAIN_PHOTO) if os.path.exists(MAIN_PHOTO) else MAIN_PHOTO
-        await target.answer_photo(photo, **kwargs)
-    except Exception:
-        await target.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
-
 # ─── /start ────────────────────────────────────────────────────────────────────
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
@@ -1803,7 +1790,7 @@ async def cmd_start(message: Message, state: FSMContext):
         )
         return
     name = message.from_user.first_name or "игрок"
-    await send_photo_msg(message,
+    await message.answer(
         f"🎮 <b>Привет, {name}! Добро пожаловать в PackCraftBot!</b>\n\n"
         "Создай кастомный ресурс-пак для Minecraft прямо здесь:\n"
         "• 🖼 <b>Текстуры</b> — блоки, мобы, броня, инструменты, GUI\n"
@@ -1813,7 +1800,7 @@ async def cmd_start(message: Message, state: FSMContext):
         "🆓 <b>Бесплатно:</b> 1 пак\n"
         "💎 <b>Подписка:</b> безлимитные паки!\n\n"
         "Выбери действие:",
-        reply_markup=main_menu_kb()
+        reply_markup=main_menu_kb(), parse_mode="HTML"
     )
 
 @dp.callback_query(F.data == "check_subscription")
@@ -1824,7 +1811,7 @@ async def cb_check_subscription(cq: CallbackQuery, state: FSMContext):
     await cq.message.delete()
     upsert_user(cq.from_user.id, cq.from_user.username)
     name = cq.from_user.first_name or "игрок"
-    await send_photo_msg(cq.message,
+    await cq.message.answer(
         f"🎮 <b>Привет, {name}! Добро пожаловать в PackCraftBot!</b>\n\n"
         "Создай кастомный ресурс-пак для Minecraft прямо здесь:\n"
         "• 🖼 <b>Текстуры</b> — блоки, мобы, броня, инструменты, GUI\n"
@@ -1834,7 +1821,7 @@ async def cb_check_subscription(cq: CallbackQuery, state: FSMContext):
         "🆓 <b>Бесплатно:</b> 1 пак\n"
         "💎 <b>Подписка:</b> безлимитные паки!\n\n"
         "Выбери действие:",
-        reply_markup=main_menu_kb()
+        reply_markup=main_menu_kb(), parse_mode="HTML"
     )
 
 @dp.message(Command("help"))
@@ -2184,7 +2171,7 @@ async def cb_sound_item(cq: CallbackQuery, state: FSMContext):
     await cq.message.edit_text(
         f"🔊 <b>{label}</b>\n\nОтправь файл звука в формате <b>.ogg</b>\n\n"
         "💡 Конвертировать mp3→ogg можно на сайте <a href='https://audio.online-convert.com/ru/convert-to-ogg'>online-convert.com</a>",
-        reply_markup=back_kb("back_to_sounds"), parse_mode="HTML"
+        reply_markup=back_kb("back_to_sounds"), parse_mode="HTML", disable_web_page_preview=True
     )
 
 @dp.callback_query(PackStates.choose_item, F.data.startswith("item_"))
@@ -2560,7 +2547,7 @@ async def cb_edit_sound_item(cq: CallbackQuery, state: FSMContext):
         f"🔊 <b>{label}</b>\n\nОтправь файл звука в формате <b>.ogg</b>\n\n"
         "💡 Конвертировать mp3→ogg можно на сайте "
         "<a href='https://audio.online-convert.com/ru/convert-to-ogg'>online-convert.com</a>",
-        reply_markup=back_kb("edit_back_sounds"), parse_mode="HTML"
+        reply_markup=back_kb("edit_back_sounds"), parse_mode="HTML", disable_web_page_preview=True
     )
 
 @dp.callback_query(EditStates.choose_category, F.data == "edit_back_categories")
