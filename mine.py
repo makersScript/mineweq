@@ -1810,6 +1810,17 @@ async def send_photo_msg_from_cq(cq_message, text: str, reply_markup=None, parse
     except Exception:
         await cq_message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
 
+
+async def smart_edit(cq_message, text: str, reply_markup=None, parse_mode="HTML"):
+    """Edit message text or caption depending on whether it has a photo."""
+    kwargs = {"parse_mode": parse_mode}
+    if reply_markup:
+        kwargs["reply_markup"] = reply_markup
+    if cq_message.photo:
+        await cq_message.edit_caption(caption=text, **kwargs)
+    else:
+        await cq_message.edit_text(text, **kwargs)
+
 # ─── /start ────────────────────────────────────────────────────────────────────
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
@@ -1887,7 +1898,7 @@ async def cmd_help(message: Message, state: FSMContext):
 @dp.callback_query(F.data == "main_menu")
 async def cb_main_menu(cq: CallbackQuery, state: FSMContext):
     await state.clear()
-    await cq.message.edit_text("🎮 <b>Главное меню</b>\n\nВыбери действие:",
+    await smart_edit(cq.message, "🎮 <b>Главное меню</b>\n\nВыбери действие:",
                                 reply_markup=main_menu_kb(), parse_mode="HTML")
 
 @dp.callback_query(F.data == "profile")
@@ -1906,7 +1917,7 @@ async def cb_profile(cq: CallbackQuery):
     else:
         sub_text = "❌ Нет подписки"
 
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         f"👤 <b>Профиль</b>\n\n"
         f"🆔 ID: <code>{uid}</code>\n"
         f"📦 Паков создано: <b>{packs}</b>\n"
@@ -1916,7 +1927,7 @@ async def cb_profile(cq: CallbackQuery):
 
 @dp.callback_query(F.data == "about")
 async def cb_about(cq: CallbackQuery):
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "ℹ️ <b>О боте</b>\n\n"
         "🎮 <b>PackCraftBot</b> — создай ресурс-пак для Minecraft прямо в Telegram!\n\n"
         "✅ Java Edition и Bedrock Edition\n"
@@ -1936,7 +1947,7 @@ async def cb_about(cq: CallbackQuery):
 # ─── SUBSCRIPTION ──────────────────────────────────────────────────────────────
 @dp.callback_query(F.data == "buy_sub")
 async def cb_buy_sub(cq: CallbackQuery):
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "💎 <b>Выбери способ оплаты и тариф:</b>",
         reply_markup=buy_sub_kb(), parse_mode="HTML"
     )
@@ -2018,7 +2029,7 @@ async def cb_pay_crypto(cq: CallbackQuery):
             [InlineKeyboardButton(text="💰 Оплатить", url=pay_url)],
             [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_crypto_{invoice_id}_{plan}_{uid}")],
         ])
-        await cq.message.edit_text(
+        await smart_edit(cq.message, 
             f"💰 <b>Оплата через CryptoBot</b>\n\nСумма: <b>${amount} USDT</b>\n\n"
             "Нажми кнопку для оплаты, затем «Я оплатил»",
             reply_markup=kb, parse_mode="HTML"
@@ -2068,7 +2079,7 @@ async def cb_check_crypto(cq: CallbackQuery):
         # Не понижаем forever → week
         u = get_user(uid)
         if u and u.get("sub_type") == "forever" and plan == "week":
-            await cq.message.edit_text(
+            await smart_edit(cq.message, 
                 "ℹ️ У тебя уже есть подписка <b>навсегда</b>!",
                 parse_mode="HTML", reply_markup=main_menu_kb()
             )
@@ -2076,7 +2087,7 @@ async def cb_check_crypto(cq: CallbackQuery):
         log_payment(uid, "crypto", inv.get("amount"), f"crypto_{plan}")
         give_sub(uid, plan)
         label = "навсегда ♾" if plan == "forever" else "на неделю 📅"
-        await cq.message.edit_text(
+        await smart_edit(cq.message, 
             f"✅ <b>Оплата получена! Подписка {label} активирована.</b>",
             parse_mode="HTML", reply_markup=main_menu_kb()
         )
@@ -2088,7 +2099,7 @@ async def cb_check_crypto(cq: CallbackQuery):
 async def cb_create_pack(cq: CallbackQuery, state: FSMContext):
     uid = cq.from_user.id
     if not is_subscribed(uid) and not has_free_pack(uid):
-        await cq.message.edit_text(
+        await smart_edit(cq.message, 
             "❌ <b>Лимит исчерпан</b>\n\nБесплатно можно создать только 1 пак.\n"
             "Купи подписку для безлимита!",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -2100,7 +2111,7 @@ async def cb_create_pack(cq: CallbackQuery, state: FSMContext):
         return
     await state.update_data(texture_files={}, sound_files={})
     await state.set_state(PackStates.choose_version)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🌍 <b>Выбери версию Minecraft:</b>\n\n"
         "В один пак войдут и текстуры, и звуки — всё вместе!",
         reply_markup=version_kb(), parse_mode="HTML"
@@ -2111,7 +2122,7 @@ async def cb_version(cq: CallbackQuery, state: FSMContext):
     version = cq.data.split("_")[1]
     await state.update_data(version=version)
     await state.set_state(PackStates.enter_name)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "✏️ <b>Введи название ресурс-пака:</b>\n\n"
         "Например: <i>MyAwesomePack</i>\n"
         "(не более 40 символов)",
@@ -2180,7 +2191,7 @@ async def _proceed_to_content_menu(msg, state: FSMContext, edit: bool = False):
     await state.set_state(PackStates.add_more)
     text = f"🎨 <b>Что добавить в пак?</b>{summary}\n\nДобавляй текстуры и звуки — всё войдёт в один файл."
     if edit:
-        await msg.edit_text(text, reply_markup=pack_content_kb(), parse_mode="HTML")
+        await smart_edit(msg, text, reply_markup=pack_content_kb(), parse_mode="HTML")
     else:
         await msg.answer(text, reply_markup=pack_content_kb(), parse_mode="HTML")
 
@@ -2190,7 +2201,7 @@ async def cb_category(cq: CallbackQuery, state: FSMContext):
     _, items = CATEGORIES[cat_key]
     await state.update_data(category=cat_key)
     await state.set_state(PackStates.choose_item)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🔍 <b>Выбери что заменить:</b>",
         reply_markup=items_kb_with_back(items), parse_mode="HTML"
     )
@@ -2201,7 +2212,7 @@ async def cb_sound_item(cq: CallbackQuery, state: FSMContext):
     await state.update_data(current_item=snd_key, current_mode="sound")
     await state.set_state(PackStates.upload_file)
     label = SOUND_LABELS.get(snd_key, snd_key)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         f"🔊 <b>{label}</b>\n\nОтправь файл звука в формате <b>.ogg</b>\n\n"
         "💡 Конвертировать mp3→ogg можно на сайте <a href='https://audio.online-convert.com/ru/convert-to-ogg'>online-convert.com</a>",
         reply_markup=back_kb("back_to_sounds"), parse_mode="HTML", disable_web_page_preview=True
@@ -2216,7 +2227,7 @@ async def cb_item(cq: CallbackQuery, state: FSMContext):
     # Назад → к списку предметов этой категории
     data = await state.get_data()
     cat_key = data.get("category", "weapons")
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         f"🖼 <b>{label}</b>\n\nОтправь текстуру в формате <b>PNG</b>\n"
         "Поддерживаемые размеры: 16×16, 32×32, 64×64, 128×128",
         reply_markup=back_kb(f"back_to_items_{cat_key}"), parse_mode="HTML"
@@ -2226,7 +2237,7 @@ async def cb_item(cq: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "back_to_sounds")
 async def cb_back_to_sounds(cq: CallbackQuery, state: FSMContext):
     await state.set_state(PackStates.choose_category)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🔊 <b>Выбери звук для замены:</b>",
         reply_markup=sound_category_kb(), parse_mode="HTML"
     )
@@ -2234,7 +2245,7 @@ async def cb_back_to_sounds(cq: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "back_to_categories")
 async def cb_back_to_categories(cq: CallbackQuery, state: FSMContext):
     await state.set_state(PackStates.choose_category)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "📂 <b>Выбери категорию текстуры:</b>",
         reply_markup=category_kb("texture"), parse_mode="HTML"
     )
@@ -2247,7 +2258,7 @@ async def cb_back_to_items(cq: CallbackQuery, state: FSMContext):
         return
     _, items = CATEGORIES[cat_key]
     await state.set_state(PackStates.choose_item)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🔍 <b>Выбери что заменить:</b>",
         reply_markup=items_kb(items), parse_mode="HTML"
     )
@@ -2320,7 +2331,7 @@ async def upload_file(message: Message, state: FSMContext):
 async def cb_add_texture(cq: CallbackQuery, state: FSMContext):
     await state.update_data(current_mode="texture")
     await state.set_state(PackStates.choose_category)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "📂 <b>Выбери категорию текстуры:</b>",
         reply_markup=category_kb("texture"), parse_mode="HTML"
     )
@@ -2329,7 +2340,7 @@ async def cb_add_texture(cq: CallbackQuery, state: FSMContext):
 async def cb_add_sound(cq: CallbackQuery, state: FSMContext):
     await state.update_data(current_mode="sound")
     await state.set_state(PackStates.choose_category)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🔊 <b>Выбери звук для замены:</b>",
         reply_markup=sound_category_kb(), parse_mode="HTML"
     )
@@ -2353,7 +2364,7 @@ async def cb_finish_pack(cq: CallbackQuery, state: FSMContext):
         await cq.answer("⚠️ Добавь хотя бы одну текстуру или звук!", show_alert=True)
         return
 
-    await cq.message.edit_text("⏳ <b>Собираю ресурс-пак...</b> Подожди секунду!", parse_mode="HTML")
+    await smart_edit(cq.message, "⏳ <b>Собираю ресурс-пак...</b> Подожди секунду!", parse_mode="HTML")
 
     try:
         if version == "java":
@@ -2363,7 +2374,7 @@ async def cb_finish_pack(cq: CallbackQuery, state: FSMContext):
             pack_bytes = build_bedrock_pack(tex_files, snd_files, pack_name, pack_desc, pack_icon)
             filename   = f"{pack_name}_Bedrock.mcpack"
     except Exception as e:
-        await cq.message.edit_text(
+        await smart_edit(cq.message, 
             f"❌ <b>Ошибка сборки пака:</b> <code>{e}</code>\n\nПопробуй ещё раз.",
             reply_markup=main_menu_kb(), parse_mode="HTML"
         )
@@ -2407,7 +2418,7 @@ async def cb_finish_pack(cq: CallbackQuery, state: FSMContext):
 async def cb_edit_pack(cq: CallbackQuery, state: FSMContext):
     uid = cq.from_user.id
     if not is_subscribed(uid):
-        await cq.message.edit_text(
+        await smart_edit(cq.message, 
             "🔒 <b>Редактирование пака — только для подписчиков</b>\n\n"
             "Купи подписку, чтобы загружать готовые паки и дополнять их!",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -2419,7 +2430,7 @@ async def cb_edit_pack(cq: CallbackQuery, state: FSMContext):
         return
     await state.clear()
     await state.set_state(EditStates.upload_pack)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "✏️ <b>Редактирование существующего пака</b>\n\n"
         "Отправь свой ресурс-пак файлом:\n"
         "• <b>Java Edition</b> — <code>.zip</code>\n"
@@ -2530,7 +2541,7 @@ async def cb_edit_back_content(cq: CallbackQuery, state: FSMContext):
     snd_count = len(data.get("sound_files", {}))
     summary = f"\n\n📊 Добавлено: 🖼 {tex_count} текстур, 🔊 {snd_count} звуков" if (tex_count or snd_count) else ""
     await state.set_state(EditStates.choose_action)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         f"✏️ <b>Что добавить в пак?</b>{summary}",
         reply_markup=edit_pack_content_kb(), parse_mode="HTML"
     )
@@ -2539,7 +2550,7 @@ async def cb_edit_back_content(cq: CallbackQuery, state: FSMContext):
 async def cb_edit_add_texture(cq: CallbackQuery, state: FSMContext):
     await state.update_data(edit_current_mode="texture")
     await state.set_state(EditStates.choose_category)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "📂 <b>Выбери категорию текстуры:</b>",
         reply_markup=edit_category_kb(), parse_mode="HTML"
     )
@@ -2548,7 +2559,7 @@ async def cb_edit_add_texture(cq: CallbackQuery, state: FSMContext):
 async def cb_edit_add_sound(cq: CallbackQuery, state: FSMContext):
     await state.update_data(edit_current_mode="sound")
     await state.set_state(EditStates.choose_category)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🔊 <b>Выбери звук для замены:</b>",
         reply_markup=edit_sound_category_kb(), parse_mode="HTML"
     )
@@ -2562,7 +2573,7 @@ async def cb_edit_category(cq: CallbackQuery, state: FSMContext):
     _, items = CATEGORIES[cat_key]
     await state.update_data(edit_category=cat_key)
     await state.set_state(EditStates.choose_item)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🔍 <b>Выбери что заменить:</b>",
         reply_markup=edit_items_kb(items), parse_mode="HTML"
     )
@@ -2576,7 +2587,7 @@ async def cb_edit_sound_item(cq: CallbackQuery, state: FSMContext):
     await state.update_data(edit_current_item=snd_key, edit_current_mode="sound")
     await state.set_state(EditStates.upload_file)
     label = SOUND_LABELS.get(snd_key, snd_key)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         f"🔊 <b>{label}</b>\n\nОтправь файл звука в формате <b>.ogg</b>\n\n"
         "💡 Конвертировать mp3→ogg можно на сайте "
         "<a href='https://audio.online-convert.com/ru/convert-to-ogg'>online-convert.com</a>",
@@ -2587,7 +2598,7 @@ async def cb_edit_sound_item(cq: CallbackQuery, state: FSMContext):
 @dp.callback_query(EditStates.choose_item, F.data == "edit_back_categories")
 async def cb_edit_back_categories(cq: CallbackQuery, state: FSMContext):
     await state.set_state(EditStates.choose_category)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "📂 <b>Выбери категорию текстуры:</b>",
         reply_markup=edit_category_kb(), parse_mode="HTML"
     )
@@ -2595,7 +2606,7 @@ async def cb_edit_back_categories(cq: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "edit_back_sounds")
 async def cb_edit_back_sounds(cq: CallbackQuery, state: FSMContext):
     await state.set_state(EditStates.choose_category)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🔊 <b>Выбери звук для замены:</b>",
         reply_markup=edit_sound_category_kb(), parse_mode="HTML"
     )
@@ -2608,7 +2619,7 @@ async def cb_edit_item(cq: CallbackQuery, state: FSMContext):
     label = ITEM_LABELS.get(item_key, item_key)
     data = await state.get_data()
     cat_key = data.get("edit_category", "blocks")
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         f"🖼 <b>{label}</b>\n\nОтправь текстуру в формате <b>PNG</b>\n"
         "Поддерживаемые размеры: 16×16, 32×32, 64×64, 128×128",
         reply_markup=back_kb(f"edit_back_items_{cat_key}"), parse_mode="HTML"
@@ -2622,7 +2633,7 @@ async def cb_edit_back_items(cq: CallbackQuery, state: FSMContext):
         return
     _, items = CATEGORIES[cat_key]
     await state.set_state(EditStates.choose_item)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🔍 <b>Выбери что заменить:</b>",
         reply_markup=edit_items_kb(items), parse_mode="HTML"
     )
@@ -2714,7 +2725,7 @@ async def cb_edit_finish_pack(cq: CallbackQuery, state: FSMContext):
         await cq.answer("⚠️ Добавь хотя бы одну текстуру или звук!", show_alert=True)
         return
 
-    await cq.message.edit_text("⏳ <b>Собираю обновлённый пак...</b>", parse_mode="HTML")
+    await smart_edit(cq.message, "⏳ <b>Собираю обновлённый пак...</b>", parse_mode="HTML")
 
     try:
         buf = io.BytesIO()
@@ -2784,7 +2795,7 @@ async def cb_edit_finish_pack(cq: CallbackQuery, state: FSMContext):
         pack_bytes = buf.getvalue()
         filename   = f"{pack_name}_edited.zip" if version == "java" else f"{pack_name}_edited.mcpack"
     except Exception as e:
-        await cq.message.edit_text(
+        await smart_edit(cq.message, 
             f"❌ <b>Ошибка сборки пака:</b> <code>{e}</code>\n\nПопробуй ещё раз.",
             reply_markup=main_menu_kb(), parse_mode="HTML"
         )
@@ -2822,7 +2833,7 @@ async def cb_admin_stats(cq: CallbackQuery):
         return
     total = all_users_count()
     paid  = paid_users_count()
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         f"📊 <b>Статистика</b>\n\n"
         f"👥 Всего пользователей: <b>{total}</b>\n"
         f"💎 Платных: <b>{paid}</b>\n"
@@ -2835,7 +2846,7 @@ async def cb_admin_give_sub(cq: CallbackQuery, state: FSMContext):
     if cq.from_user.id not in ADMIN_IDS:
         return
     await state.set_state(AdminStates.give_sub_id)
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         "🎁 Введи ID пользователя для выдачи подписки:",
         reply_markup=back_kb("main_menu")
     )
@@ -2870,7 +2881,7 @@ async def admin_give_type(cq: CallbackQuery, state: FSMContext):
     give_sub(target_id, sub_type)
     await state.clear()
     label = "неделя" if sub_type == "week" else "навсегда"
-    await cq.message.edit_text(
+    await smart_edit(cq.message, 
         f"✅ Подписка <b>{label}</b> выдана пользователю <code>{target_id}</code>",
         reply_markup=admin_kb(), parse_mode="HTML"
     )
